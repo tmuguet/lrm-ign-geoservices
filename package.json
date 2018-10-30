@@ -1,0 +1,37 @@
+{
+  "name": "lrm-geoportail",
+  "version": "0.1.0",
+  "description": "Support for GeoPortail in Leaflet Routing Machine",
+  "main": "dist/lrm-geoportail.min.js",
+  "scripts": {
+    "_browserify": "browserify -t browserify-shim src/L.Routing.GeoPortail.js -o dist/lrm-geoportail.js",
+    "_uglify": "uglifyjs dist/lrm-geoportail.js -o dist/lrm-geoportail.min.js",
+    "bundle": "npm run _browserify && npm run _uglify",
+    "jshint": "jshint src/L.Routing.GeoPortail.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "leaflet",
+    "routing",
+    "geoportail"
+  ],
+  "author": "Thomas Muguet <hi@tmuguet.me>",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tmuguet/lrm-geoportail.git"
+  },
+  "homepage": "https://github.com/tmuguet/lrm-geoportail",
+  "bugs": "https://github.com/tmuguet/lrm-geoportail/issues",
+  "dependencies": {},
+  "browserify-shim": {
+    "leaflet": "global:L",
+    "geoportal-access-lib": "global:Gp"
+  },
+  "devDependencies": {
+    "browserify": "^16.2.3",
+    "browserify-shim": "^3.8.14",
+    "jshint": "^2.9.6",
+    "uglify-js": "^3.4.9"
+  }
+}
