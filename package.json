@@ -23,7 +23,9 @@
   },
   "homepage": "https://github.com/tmuguet/lrm-geoportail",
   "bugs": "https://github.com/tmuguet/lrm-geoportail/issues",
-  "dependencies": {},
+  "dependencies": {
+    "geoportal-access-lib": "^2.1.0"
+  },
   "browserify-shim": {
     "leaflet": "global:L",
     "geoportal-access-lib": "global:Gp"
@@ -32,6 +34,8 @@
     "browserify": "^16.2.3",
     "browserify-shim": "^3.8.14",
     "jshint": "^2.9.6",
+    "leaflet": "^1.3.4",
+    "leaflet-routing-machine": "^3.2.12",
     "uglify-js": "^3.4.9"
   }
 }
