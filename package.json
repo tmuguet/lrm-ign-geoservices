@@ -7,7 +7,9 @@
     "_browserify": "browserify -t browserify-shim src/L.Routing.GeoPortail.js -o dist/lrm-geoportail.js",
     "_uglify": "uglifyjs dist/lrm-geoportail.js -o dist/lrm-geoportail.min.js",
     "bundle": "npm run _browserify && npm run _uglify",
-    "jshint": "jshint src/L.Routing.GeoPortail.js",
+    "eslint": "eslint src/*.js",
+    "validate": "npm run bundle && npm run eslint",
+    "version": "npm run validate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -24,7 +26,7 @@
   "homepage": "https://github.com/tmuguet/lrm-geoportail",
   "bugs": "https://github.com/tmuguet/lrm-geoportail/issues",
   "dependencies": {
-    "geoportal-access-lib": "^2.1.0"
+    "geoportal-access-lib": "^2.1.1"
   },
   "browserify-shim": {
     "leaflet": "global:L",
@@ -33,8 +35,10 @@
   "devDependencies": {
     "browserify": "^16.2.3",
     "browserify-shim": "^3.8.14",
-    "jshint": "^2.9.6",
-    "leaflet": "^1.3.4",
+    "eslint": "^5.13.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-import": "^2.16.0",
+    "leaflet": "^1.4.0",
     "leaflet-routing-machine": "^3.2.12",
     "uglify-js": "^3.4.9"
   }
