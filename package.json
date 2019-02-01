@@ -4,7 +4,7 @@
   "description": "Support for GeoPortail in Leaflet Routing Machine",
   "main": "dist/lrm-geoportail.min.js",
   "scripts": {
-    "_browserify": "browserify -t browserify-shim src/L.Routing.GeoPortail.js -o dist/lrm-geoportail.js",
+    "_browserify": "browserify -t [ babelify --presets [ @babel/preset-env ] ] -t browserify-shim -p browserify-derequire src/L.Routing.GeoPortail.js -o dist/lrm-geoportail.js",
     "_uglify": "uglifyjs dist/lrm-geoportail.js -o dist/lrm-geoportail.min.js",
     "bundle": "npm run _browserify && npm run _uglify",
     "eslint": "eslint src/*.js",
@@ -33,7 +33,11 @@
     "geoportal-access-lib": "global:Gp"
   },
   "devDependencies": {
+    "@babel/core": "^7.2.2",
+    "@babel/preset-env": "^7.3.1",
+    "babelify": "^10.0.0",
     "browserify": "^16.2.3",
+    "browserify-derequire": "^1.0.0",
     "browserify-shim": "^3.8.14",
     "eslint": "^5.13.0",
     "eslint-config-airbnb-base": "^13.1.0",
