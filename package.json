@@ -1,6 +1,6 @@
 {
   "name": "lrm-geoportail",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Support for GeoPortail in Leaflet Routing Machine",
   "main": "dist/lrm-geoportail.min.js",
   "types": "src/index.d.ts",
