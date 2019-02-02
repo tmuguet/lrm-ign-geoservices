@@ -12,9 +12,8 @@ if (L.Routing === undefined) {
 
 L.Routing.GeoPortail = L.Evented.extend({
   options: {
-    profile: 'Voiture',
-    // Or 'Pieton'
-    urlParameters: {}
+    profile: 'Voiture' // Or 'Pieton'
+
   },
   initialize: function initialize(apiKey, options) {
     this._apiKey = apiKey;
