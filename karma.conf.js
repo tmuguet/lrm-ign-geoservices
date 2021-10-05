@@ -17,7 +17,7 @@ module.exports = function (config) {
       'node_modules/jquery/dist/jquery.min.js',
       'node_modules/leaflet/dist/leaflet.js',
       'node_modules/leaflet-routing-machine/dist/leaflet-routing-machine.min.js',
-      'node_modules/geoportal-access-lib/dist/GpServices.js',
+      'node_modules/@mapbox/corslite/corslite.js',
       'dist/lrm-geoportail.js',
       'test/*.js',
       'test/**/*Spec.js',

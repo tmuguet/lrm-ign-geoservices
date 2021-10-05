@@ -26,12 +26,9 @@
   },
   "homepage": "https://github.com/tmuguet/lrm-geoportail",
   "bugs": "https://github.com/tmuguet/lrm-geoportail/issues",
-  "dependencies": {
-    "geoportal-access-lib": "^2.1.1"
-  },
   "browserify-shim": {
     "leaflet": "global:L",
-    "geoportal-access-lib": "global:Gp"
+    "@mapbox/corslite": "global:corslite"
   },
   "devDependencies": {
     "@babel/core": "^7.2.2",
@@ -62,5 +59,8 @@
     "nyc": "^15.1.0",
     "sinon": "^11.1.2",
     "uglify-js": "^3.4.9"
+  },
+  "dependencies": {
+    "@mapbox/corslite": "^0.0.7"
   }
 }

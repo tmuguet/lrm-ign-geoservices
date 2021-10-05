@@ -1,5 +1,5 @@
 const L = require('leaflet');
-const Gp = require('geoportal-access-lib');
+const corslite = require('@mapbox/corslite');
 
 if (L.Routing === undefined) {
   L.Routing = {};
@@ -7,22 +7,69 @@ if (L.Routing === undefined) {
 
 L.Routing.GeoPortail = L.Evented.extend({
   options: {
-    profile: 'Voiture', // Or 'Pieton'
+    serviceUrl: 'https://wxs.ign.fr/calcul/geoportail/itineraire/rest/1.0.0/route',
+    timeout: 10 * 1000,
+    resource: 'bdtopo-osrm', // or 'bdtopo-pgr'
+    profile: 'car', // Or 'pedestrian'
+    optimization: 'fastest', // or shortest
   },
 
-  initialize(apiKey, options) {
-    this._apiKey = apiKey;
+  initialize(options) {
     L.Util.setOptions(this, options);
   },
 
+  _routeDone(response, inputWaypoints, options, callback, context) {
+    const alts = [];
+    const route = {
+      name: '',
+      summary: {
+        totalTime: response.duration * 60,
+        totalDistance: response.distance,
+      },
+      coordinates: response.geometry.coordinates.map(x => L.latLng(x[1], x[0])),
+      waypoints: this._toWaypoints(response),
+      waypointIndices: [0, response.geometry.coordinates.length - 1],
+      inputWaypoints,
+      instructions: this._toInstructions(response),
+    };
+
+    alts.push(route);
+    callback.call(context, null, alts);
+  },
+
+  _toWaypoint(str, name = null, options = {}) {
+    const latlng = str.split(',');
+    return new L.Routing.Waypoint(L.latLng(parseFloat(latlng[1]), parseFloat(latlng[0])), name, options);
+  },
+
+  _toWaypoints(response) {
+    const wps = [this._toWaypoint(response.portions[0].start)];
+    response.portions.forEach((x) => {
+      wps.push(this._toWaypoint(x.end));
+    });
+    return wps;
+  },
+
+  _toInstructions(response) {
+    const instr = [];
+    response.portions.forEach((portion) => {
+      portion.steps.forEach((step) => {
+        instr.push({
+          distance: step.distance,
+          time: step.duration,
+          text: step.instruction
+          || (step.attributes.name.cpx_numero
+            + (step.attributes.name.nom_1_gauche || step.attributes.name.nom_1_droite)),
+        });
+      });
+    });
+    return instr;
+  },
+
   route(waypoints, callback, context, options = {}) {
-    // Merge the options so we get options defined at L.Routing.GeoPortail creation
-    const _options = this.options;
-    const optionsKeys = Object.keys(options);
-    for (let i = 0; i < optionsKeys.length; i += 1) {
-      const attrname = optionsKeys[i];
-      _options[attrname] = options[attrname];
-    }
+    let timedOut = false;
+
+    const _options = L.extend({}, this.options, options);
 
     const wps = [];
     for (let i = 0; i < waypoints.length; i += 1) {
@@ -35,71 +82,50 @@ L.Routing.GeoPortail = L.Evented.extend({
     }
 
     const routeOpts = this.buildRouteOpts(wps, _options);
-    routeOpts.onSuccess = (results) => {
-      this._handleGeoPortailSuccess(results, wps, callback, context);
-    };
-    routeOpts.onFailure = (error) => {
-      this._handleGeoPortailError(error, callback, context);
-    };
+    const url = _options.serviceUrl + L.Util.getParamString(routeOpts);
 
-    Gp.Services.route(routeOpts);
-    return this;
-  },
-
-  _handleGeoPortailSuccess(results, wps, callback, context) {
-    const ctx = context || callback;
-
-    const coordinates = [];
-    const instructions = [];
-    for (let i = 0; i < results.routeInstructions.length; i += 1) {
-      const instruction = results.routeInstructions[i];
-
-      instructions.push({
-        type: this._instructionToType(instruction),
-        text: instruction.instruction,
-        distance: instruction.distance,
-        time: instruction.duration,
-        index: coordinates.length,
+    const timer = setTimeout(() => {
+      timedOut = true;
+      callback.call(context || callback, {
+        status: -1,
+        message: 'OSRM request timed out.',
       });
+    }, _options.timeout);
 
-      for (let j = 0; j < instruction.geometry.coordinates.length; j += 1) {
-        const coords = instruction.geometry.coordinates[j];
-        coordinates.push(L.latLng(coords[1], coords[0]));
+    // eslint-disable-next-line func-names
+    const xhr = corslite(url, L.bind(function (err, resp) {
+      const error = {};
+
+      clearTimeout(timer);
+      if (!timedOut) {
+        if (!err) {
+          try {
+            try {
+              const data = JSON.parse(resp.responseText);
+              this._routeDone(data, wps, options, callback, context);
+              return;
+            } catch (ex) {
+              error.status = -3;
+              error.message = ex.toString();
+            }
+          } catch (ex) {
+            error.status = -2;
+            error.message = `Error parsing OSRM response: ${ex.toString()}`;
+          }
+        } else {
+          error.message = `HTTP request failed: ${err.type
+          }${err.target && err.target.status ? ` HTTP ${err.target.status}: ${err.target.statusText}` : ''}`;
+          error.url = url;
+          error.status = -1;
+          error.target = err;
+        }
+
+        callback.call(context || callback, error);
+      } else {
+        xhr.abort();
       }
-    }
-
-    const alt = {
-      name: '',
-      coordinates,
-      instructions,
-      summary: {
-        totalDistance: results.totalDistance,
-        totalTime: results.totalTime, // TODO: unit?
-        totalAscend: 0, // unsupported?
-      },
-      inputWaypoints: wps,
-      actualWaypoints: [
-        {
-          latLng: coordinates[0],
-          name: wps[0].name,
-        },
-        {
-          latLng: coordinates[coordinates.length - 1],
-          name: wps[wps.length - 1].name,
-        },
-      ],
-      waypointIndices: [0, coordinates.length - 1],
-    };
-
-    callback.call(ctx, null, [alt]);
-  },
-
-  _handleGeoPortailError(error, callback, context) {
-    callback.call(context || callback, {
-      status: -1,
-      message: `GeoPortail route failed: ${error}`,
-      response: null,
-    });
+    }, this));
+    return xhr;
   },
 
   buildRouteOpts(waypoints, options) {
@@ -121,46 +147,31 @@ L.Routing.GeoPortail = L.Evented.extend({
 
     for (i = 0; i < wps.length; i += 1) {
       const viaPoint = wps[i].latLng;
-      viaPoints.push({ x: viaPoint.lng, y: viaPoint.lat });
+      viaPoints.push(L.Util.template('{lng},{lat}', viaPoint));
     }
 
     const opt = {
-      distanceUnit: 'm',
-      endPoint: {
-        x: endLatLng.lng,
-        y: endLatLng.lat,
-      },
-      exclusions: [],
-      geometryInInstructions: true,
-      graph: options.profile,
-      routePreferences: 'fastest',
-      startPoint: {
-        x: startLatLng.lng,
-        y: startLatLng.lat,
-      },
-      viaPoints,
-      apiKey: this._apiKey,
+      resource: options.resource,
+      start: L.Util.template('{lng},{lat}', startLatLng),
+      end: L.Util.template('{lng},{lat}', endLatLng),
+      intermediates: viaPoints.join('|'),
+      profile: options.profile,
+      optimization: options.optimization,
+      getSteps: true,
+      geometryFormat: 'geojson',
+      getBbox: false,
+      crs: 'EPSG:4326',
+      timeUnit: 'second',
+      distanceUnit: 'meter',
+      waysAttributes: '',
     };
 
     return opt;
   },
-
-  _instructionToType(instruction) {
-    switch (instruction.code) {
-      case 'BL':
-        return 'SharpLeft';
-      case 'L':
-        return 'Left';
-      case 'R':
-        return 'Right';
-      default:
-        return '';
-    }
-  },
 });
 
-L.Routing.geoPortail = function geoPortail(apiKey, options) {
-  return new L.Routing.GeoPortail(apiKey, options);
+L.Routing.geoPortail = function geoPortail(options) {
+  return new L.Routing.GeoPortail(options);
 };
 
 module.exports = L.Routing.GeoPortail;
