@@ -4,7 +4,7 @@
 
 var L = (typeof window !== "undefined" ? window['L'] : typeof global !== "undefined" ? global['L'] : null);
 
-var Gp = (typeof window !== "undefined" ? window['Gp'] : typeof global !== "undefined" ? global['Gp'] : null);
+var corslite = (typeof window !== "undefined" ? window['corslite'] : typeof global !== "undefined" ? global['corslite'] : null);
 
 if (L.Routing === undefined) {
   L.Routing = {};
@@ -12,30 +12,75 @@ if (L.Routing === undefined) {
 
 L.Routing.GeoPortail = L.Evented.extend({
   options: {
-    profile: 'Voiture' // Or 'Pieton'
+    serviceUrl: 'https://wxs.ign.fr/calcul/geoportail/itineraire/rest/1.0.0/route',
+    timeout: 10 * 1000,
+    resource: 'bdtopo-osrm',
+    // or 'bdtopo-pgr'
+    profile: 'car',
+    // Or 'pedestrian'
+    optimization: 'fastest' // or shortest
 
   },
-  initialize: function initialize(apiKey, options) {
-    this._apiKey = apiKey;
+  initialize: function initialize(options) {
     L.Util.setOptions(this, options);
   },
-  route: function route(waypoints, callback, context) {
+  _routeDone: function _routeDone(response, inputWaypoints, options, callback, context) {
+    var alts = [];
+    var route = {
+      name: '',
+      summary: {
+        totalTime: response.duration * 60,
+        totalDistance: response.distance
+      },
+      coordinates: response.geometry.coordinates.map(function (x) {
+        return L.latLng(x[1], x[0]);
+      }),
+      waypoints: this._toWaypoints(response),
+      waypointIndices: [0, response.geometry.coordinates.length - 1],
+      inputWaypoints: inputWaypoints,
+      instructions: this._toInstructions(response)
+    };
+    alts.push(route);
+    callback.call(context, null, alts);
+  },
+  _toWaypoint: function _toWaypoint(str) {
+    var name = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+    var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    var latlng = str.split(',');
+    return new L.Routing.Waypoint(L.latLng(parseFloat(latlng[1]), parseFloat(latlng[0])), name, options);
+  },
+  _toWaypoints: function _toWaypoints(response) {
     var _this = this;
 
+    var wps = [this._toWaypoint(response.portions[0].start)];
+    response.portions.forEach(function (x) {
+      wps.push(_this._toWaypoint(x.end));
+    });
+    return wps;
+  },
+  _toInstructions: function _toInstructions(response) {
+    var instr = [];
+    response.portions.forEach(function (portion) {
+      portion.steps.forEach(function (step) {
+        instr.push({
+          distance: step.distance,
+          time: step.duration,
+          text: step.instruction || step.attributes.name.cpx_numero + (step.attributes.name.nom_1_gauche || step.attributes.name.nom_1_droite)
+        });
+      });
+    });
+    return instr;
+  },
+  route: function route(waypoints, callback, context) {
     var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
-    // Merge the options so we get options defined at L.Routing.GeoPortail creation
-    var _options = this.options;
-    var optionsKeys = Object.keys(options);
+    var timedOut = false;
 
-    for (var i = 0; i < optionsKeys.length; i += 1) {
-      var attrname = optionsKeys[i];
-      _options[attrname] = options[attrname];
-    }
+    var _options = L.extend({}, this.options, options);
 
     var wps = [];
 
-    for (var _i = 0; _i < waypoints.length; _i += 1) {
-      var wp = waypoints[_i];
+    for (var i = 0; i < waypoints.length; i += 1) {
+      var wp = waypoints[i];
       wps.push({
         latLng: wp.latLng,
         name: wp.name,
@@ -44,68 +89,49 @@ L.Routing.GeoPortail = L.Evented.extend({
     }
 
     var routeOpts = this.buildRouteOpts(wps, _options);
-
-    routeOpts.onSuccess = function (results) {
-      _this._handleGeoPortailSuccess(results, wps, callback, context);
-    };
-
-    routeOpts.onFailure = function (error) {
-      _this._handleGeoPortailError(error, callback, context);
-    };
-
-    Gp.Services.route(routeOpts);
-    return this;
-  },
-  _handleGeoPortailSuccess: function _handleGeoPortailSuccess(results, wps, callback, context) {
-    var ctx = context || callback;
-    var coordinates = [];
-    var instructions = [];
-
-    for (var i = 0; i < results.routeInstructions.length; i += 1) {
-      var instruction = results.routeInstructions[i];
-      instructions.push({
-        type: this._instructionToType(instruction),
-        text: instruction.instruction,
-        distance: instruction.distance,
-        time: instruction.duration,
-        index: coordinates.length
+    var url = _options.serviceUrl + L.Util.getParamString(routeOpts);
+    var timer = setTimeout(function () {
+      timedOut = true;
+      callback.call(context || callback, {
+        status: -1,
+        message: 'OSRM request timed out.'
       });
+    }, _options.timeout); // eslint-disable-next-line func-names
 
-      for (var j = 0; j < instruction.geometry.coordinates.length; j += 1) {
-        var coords = instruction.geometry.coordinates[j];
-        coordinates.push(L.latLng(coords[1], coords[0]));
+    var xhr = corslite(url, L.bind(function (err, resp) {
+      var error = {};
+      clearTimeout(timer);
+
+      if (!timedOut) {
+        if (!err) {
+          try {
+            try {
+              var data = JSON.parse(resp.responseText);
+
+              this._routeDone(data, wps, options, callback, context);
+
+              return;
+            } catch (ex) {
+              error.status = -3;
+              error.message = ex.toString();
+            }
+          } catch (ex) {
+            error.status = -2;
+            error.message = "Error parsing OSRM response: ".concat(ex.toString());
+          }
+        } else {
+          error.message = "HTTP request failed: ".concat(err.type).concat(err.target && err.target.status ? " HTTP ".concat(err.target.status, ": ").concat(err.target.statusText) : '');
+          error.url = url;
+          error.status = -1;
+          error.target = err;
+        }
+
+        callback.call(context || callback, error);
+      } else {
+        xhr.abort();
       }
-    }
-
-    var alt = {
-      name: '',
-      coordinates: coordinates,
-      instructions: instructions,
-      summary: {
-        totalDistance: results.totalDistance,
-        totalTime: results.totalTime,
-        // TODO: unit?
-        totalAscend: 0 // unsupported?
-
-      },
-      inputWaypoints: wps,
-      actualWaypoints: [{
-        latLng: coordinates[0],
-        name: wps[0].name
-      }, {
-        latLng: coordinates[coordinates.length - 1],
-        name: wps[wps.length - 1].name
-      }],
-      waypointIndices: [0, coordinates.length - 1]
-    };
-    callback.call(ctx, null, [alt]);
-  },
-  _handleGeoPortailError: function _handleGeoPortailError(error, callback, context) {
-    callback.call(context || callback, {
-      status: -1,
-      message: "GeoPortail route failed: ".concat(error),
-      response: null
-    });
+    }, this));
+    return xhr;
   },
   buildRouteOpts: function buildRouteOpts(waypoints, options) {
     var wps = [];
@@ -126,50 +152,30 @@ L.Routing.GeoPortail = L.Evented.extend({
 
     for (i = 0; i < wps.length; i += 1) {
       var viaPoint = wps[i].latLng;
-      viaPoints.push({
-        x: viaPoint.lng,
-        y: viaPoint.lat
-      });
+      viaPoints.push(L.Util.template('{lng},{lat}', viaPoint));
     }
 
     var opt = {
-      distanceUnit: 'm',
-      endPoint: {
-        x: endLatLng.lng,
-        y: endLatLng.lat
-      },
-      exclusions: [],
-      geometryInInstructions: true,
-      graph: options.profile,
-      routePreferences: 'fastest',
-      startPoint: {
-        x: startLatLng.lng,
-        y: startLatLng.lat
-      },
-      viaPoints: viaPoints,
-      apiKey: this._apiKey
+      resource: options.resource,
+      start: L.Util.template('{lng},{lat}', startLatLng),
+      end: L.Util.template('{lng},{lat}', endLatLng),
+      intermediates: viaPoints.join('|'),
+      profile: options.profile,
+      optimization: options.optimization,
+      getSteps: true,
+      geometryFormat: 'geojson',
+      getBbox: false,
+      crs: 'EPSG:4326',
+      timeUnit: 'second',
+      distanceUnit: 'meter',
+      waysAttributes: ''
     };
     return opt;
-  },
-  _instructionToType: function _instructionToType(instruction) {
-    switch (instruction.code) {
-      case 'BL':
-        return 'SharpLeft';
-
-      case 'L':
-        return 'Left';
-
-      case 'R':
-        return 'Right';
-
-      default:
-        return '';
-    }
   }
 });
 
-L.Routing.geoPortail = function geoPortail(apiKey, options) {
-  return new L.Routing.GeoPortail(apiKey, options);
+L.Routing.geoPortail = function geoPortail(options) {
+  return new L.Routing.GeoPortail(options);
 };
 
 module.exports = L.Routing.GeoPortail;
