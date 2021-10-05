@@ -29,14 +29,14 @@ L.Routing.GeoPortail = L.Evented.extend({
     var route = {
       name: '',
       summary: {
-        totalTime: response.duration * 60,
+        totalTime: response.duration,
         totalDistance: response.distance
       },
       coordinates: response.geometry.coordinates.map(function (x) {
         return L.latLng(x[1], x[0]);
       }),
       waypoints: this._toWaypoints(response),
-      waypointIndices: [0, response.geometry.coordinates.length - 1],
+      waypointIndices: this._toWaypointsIndices(response),
       inputWaypoints: inputWaypoints,
       instructions: this._toInstructions(response)
     };
@@ -58,15 +58,35 @@ L.Routing.GeoPortail = L.Evented.extend({
     });
     return wps;
   },
+  _isValidStep: function _isValidStep(step) {
+    return step.geometry.coordinates.length > 2 || step.geometry.coordinates[0][0] !== step.geometry.coordinates[1][0] || step.geometry.coordinates[0][1] !== step.geometry.coordinates[1][1];
+  },
+  _toWaypointsIndices: function _toWaypointsIndices(response) {
+    var _this2 = this;
+
+    var indices = [0];
+    var total = 0;
+    response.portions.forEach(function (portion) {
+      portion.steps.forEach(function (step) {
+        if (_this2._isValidStep(step)) total += step.geometry.coordinates.length - 1;
+      });
+      indices.push(total);
+    });
+    return indices;
+  },
   _toInstructions: function _toInstructions(response) {
+    var _this3 = this;
+
     var instr = [];
     response.portions.forEach(function (portion) {
       portion.steps.forEach(function (step) {
-        instr.push({
-          distance: step.distance,
-          time: step.duration,
-          text: step.instruction || step.attributes.name.cpx_numero + (step.attributes.name.nom_1_gauche || step.attributes.name.nom_1_droite)
-        });
+        if (_this3._isValidStep(step)) {
+          instr.push({
+            distance: step.distance,
+            time: step.duration,
+            text: step.instruction || step.attributes.name.cpx_numero + (step.attributes.name.nom_1_gauche || step.attributes.name.nom_1_droite)
+          });
+        }
       });
     });
     return instr;
@@ -77,24 +97,20 @@ L.Routing.GeoPortail = L.Evented.extend({
 
     var _options = L.extend({}, this.options, options);
 
-    var wps = [];
-
-    for (var i = 0; i < waypoints.length; i += 1) {
-      var wp = waypoints[i];
-      wps.push({
+    var wps = waypoints.map(function (wp) {
+      return {
         latLng: wp.latLng,
         name: wp.name,
         options: wp.options
-      });
-    }
-
+      };
+    });
     var routeOpts = this.buildRouteOpts(wps, _options);
     var url = _options.serviceUrl + L.Util.getParamString(routeOpts);
     var timer = setTimeout(function () {
       timedOut = true;
       callback.call(context || callback, {
         status: -1,
-        message: 'OSRM request timed out.'
+        message: 'IGN request timed out.'
       });
     }, _options.timeout); // eslint-disable-next-line func-names
 
@@ -117,10 +133,10 @@ L.Routing.GeoPortail = L.Evented.extend({
             }
           } catch (ex) {
             error.status = -2;
-            error.message = "Error parsing OSRM response: ".concat(ex.toString());
+            error.message = "Error parsing IGN response: ".concat(ex.toString());
           }
         } else {
-          error.message = "HTTP request failed: ".concat(err.type).concat(err.target && err.target.status ? " HTTP ".concat(err.target.status, ": ").concat(err.target.statusText) : '');
+          error.message = "HTTP request failed: ".concat(err.type) + "".concat(err.target && err.target.status ? " HTTP ".concat(err.target.status, ": ").concat(err.target.statusText) : '');
           error.url = url;
           error.status = -1;
           error.target = err;
@@ -134,27 +150,18 @@ L.Routing.GeoPortail = L.Evented.extend({
     return xhr;
   },
   buildRouteOpts: function buildRouteOpts(waypoints, options) {
-    var wps = [];
-    var i;
-
-    for (i = 0; i < waypoints.length; i += 1) {
-      var wp = waypoints[i];
-      wps.push({
+    var wps = waypoints.map(function (wp) {
+      return {
         latLng: wp.latLng,
         name: wp.name,
         options: wp.options
-      });
-    }
-
+      };
+    });
     var startLatLng = wps.shift().latLng;
     var endLatLng = wps.pop().latLng;
-    var viaPoints = [];
-
-    for (i = 0; i < wps.length; i += 1) {
-      var viaPoint = wps[i].latLng;
-      viaPoints.push(L.Util.template('{lng},{lat}', viaPoint));
-    }
-
+    var viaPoints = wps.map(function (wp) {
+      return L.Util.template('{lng},{lat}', wp.latLng);
+    });
     var opt = {
       resource: options.resource,
       start: L.Util.template('{lng},{lat}', startLatLng),

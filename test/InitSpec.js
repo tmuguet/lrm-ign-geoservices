@@ -31,13 +31,16 @@ describe('Init', function () {
       function (err, result) {
         try {
           expect(err).to.be.null;
-          expect(result).to.be.an('array').that.is.not.empty;
-          expect(result[0]).to.have.property('coordinates').that.is.an('array').that.is.not.empty;
-          expect(result[0]).to.have.property('instructions').that.is.an('array').that.is.not.empty;
+          expect(result).to.be.an('array').that.has.lengthOf(1);
+          expect(result[0]).to.have.property('coordinates').that.is.an('array').that.has.lengthOf(741);
+          expect(result[0]).to.have.property('instructions').that.is.an('array').that.has.lengthOf(6);
           expect(result[0]).to.have.property('summary').that.is.an('object').that.is.not.empty;
-          expect(result[0]).to.have.property('inputWaypoints').that.is.an('array').that.is.not.empty;
-          expect(result[0]).to.have.property('waypoints').that.is.an('array').that.is.not.empty;
-          expect(result[0]).to.have.property('waypointIndices').that.is.an('array').that.is.not.empty;
+          expect(result[0].summary).to.have.property('totalTime').that.equals(3072.3);
+          expect(result[0].summary).to.have.property('totalDistance').that.equals(3414.4);
+          expect(result[0]).to.have.property('inputWaypoints').that.is.an('array').that.has.lengthOf(3);
+          expect(result[0]).to.have.property('waypoints').that.is.an('array').that.has.lengthOf(3);
+          expect(result[0]).to.have.property('waypointIndices').that.is.an('array').that.has.lengthOf(3);
+          expect(result[0].waypointIndices).to.deep.equal([0, 371, 740]);
           done();
         } catch (e) {
           done(e);

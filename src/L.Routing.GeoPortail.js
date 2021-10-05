@@ -23,12 +23,12 @@ L.Routing.GeoPortail = L.Evented.extend({
     const route = {
       name: '',
       summary: {
-        totalTime: response.duration * 60,
+        totalTime: response.duration,
         totalDistance: response.distance,
       },
       coordinates: response.geometry.coordinates.map(x => L.latLng(x[1], x[0])),
       waypoints: this._toWaypoints(response),
-      waypointIndices: [0, response.geometry.coordinates.length - 1],
+      waypointIndices: this._toWaypointsIndices(response),
       inputWaypoints,
       instructions: this._toInstructions(response),
     };
@@ -50,17 +50,37 @@ L.Routing.GeoPortail = L.Evented.extend({
     return wps;
   },
 
+  _isValidStep(step) {
+    return (step.geometry.coordinates.length > 2
+       || step.geometry.coordinates[0][0] !== step.geometry.coordinates[1][0]
+       || step.geometry.coordinates[0][1] !== step.geometry.coordinates[1][1]);
+  },
+
+  _toWaypointsIndices(response) {
+    const indices = [0];
+    let total = 0;
+    response.portions.forEach((portion) => {
+      portion.steps.forEach((step) => {
+        if (this._isValidStep(step)) total += step.geometry.coordinates.length - 1;
+      });
+      indices.push(total);
+    });
+    return indices;
+  },
+
   _toInstructions(response) {
     const instr = [];
     response.portions.forEach((portion) => {
       portion.steps.forEach((step) => {
-        instr.push({
-          distance: step.distance,
-          time: step.duration,
-          text: step.instruction
-          || (step.attributes.name.cpx_numero
-            + (step.attributes.name.nom_1_gauche || step.attributes.name.nom_1_droite)),
-        });
+        if (this._isValidStep(step)) {
+          instr.push({
+            distance: step.distance,
+            time: step.duration,
+            text: step.instruction
+              || (step.attributes.name.cpx_numero
+                + (step.attributes.name.nom_1_gauche || step.attributes.name.nom_1_droite)),
+          });
+        }
       });
     });
     return instr;
@@ -68,18 +88,13 @@ L.Routing.GeoPortail = L.Evented.extend({
 
   route(waypoints, callback, context, options = {}) {
     let timedOut = false;
-
     const _options = L.extend({}, this.options, options);
 
-    const wps = [];
-    for (let i = 0; i < waypoints.length; i += 1) {
-      const wp = waypoints[i];
-      wps.push({
-        latLng: wp.latLng,
-        name: wp.name,
-        options: wp.options,
-      });
-    }
+    const wps = waypoints.map(wp => ({
+      latLng: wp.latLng,
+      name: wp.name,
+      options: wp.options,
+    }));
 
     const routeOpts = this.buildRouteOpts(wps, _options);
     const url = _options.serviceUrl + L.Util.getParamString(routeOpts);
@@ -88,7 +103,7 @@ L.Routing.GeoPortail = L.Evented.extend({
       timedOut = true;
       callback.call(context || callback, {
         status: -1,
-        message: 'OSRM request timed out.',
+        message: 'IGN request timed out.',
       });
     }, _options.timeout);
 
@@ -110,11 +125,11 @@ L.Routing.GeoPortail = L.Evented.extend({
             }
           } catch (ex) {
             error.status = -2;
-            error.message = `Error parsing OSRM response: ${ex.toString()}`;
+            error.message = `Error parsing IGN response: ${ex.toString()}`;
           }
         } else {
-          error.message = `HTTP request failed: ${err.type
-          }${err.target && err.target.status ? ` HTTP ${err.target.status}: ${err.target.statusText}` : ''}`;
+          error.message = `HTTP request failed: ${err.type}`
+           + `${err.target && err.target.status ? ` HTTP ${err.target.status}: ${err.target.statusText}` : ''}`;
           error.url = url;
           error.status = -1;
           error.target = err;
@@ -129,26 +144,15 @@ L.Routing.GeoPortail = L.Evented.extend({
   },
 
   buildRouteOpts(waypoints, options) {
-    const wps = [];
-    let i;
-    for (i = 0; i < waypoints.length; i += 1) {
-      const wp = waypoints[i];
-      wps.push({
-        latLng: wp.latLng,
-        name: wp.name,
-        options: wp.options,
-      });
-    }
+    const wps = waypoints.map(wp => ({
+      latLng: wp.latLng,
+      name: wp.name,
+      options: wp.options,
+    }));
 
     const startLatLng = wps.shift().latLng;
     const endLatLng = wps.pop().latLng;
-
-    const viaPoints = [];
-
-    for (i = 0; i < wps.length; i += 1) {
-      const viaPoint = wps[i].latLng;
-      viaPoints.push(L.Util.template('{lng},{lat}', viaPoint));
-    }
+    const viaPoints = wps.map(wp => L.Util.template('{lng},{lat}', wp.latLng));
 
     const opt = {
       resource: options.resource,
