@@ -3,21 +3,33 @@ import * as Routing from 'leaflet-routing-machine';
 
 declare module 'leaflet' {
   module Routing {
+    enum GeoPortailResource {
+      'bdtopo-osrm',
+      'bdtopo-pgr',
+    }
     enum GeoPortailProfile {
-      Voiture,
-      Pieton,
+      'car',
+      'pedestrian',
+    }
+    enum GeoPortailOptimization {
+      'fastest',
+      'shortest'
     }
 
     interface GeoPortailOptions {
-      profile?: GeoPortailProfile;
+      serviceUrl?: String,
+      timeout?: Number,
+      resource?: GeoPortailResource,
+      profile?: GeoPortailProfile,
+      optimization?: GeoPortailOptimization,
     }
 
     class GeoPortail implements IRouter {
-      constructor(apiKey: String, options?: GeoPortailOptions);
+      constructor(options?: GeoPortailOptions);
 
-      route(waypoints: Waypoint[], callback: (args?: any) => void, context?: {}, options?: RoutingOptions): this;
+      route(waypoints: Waypoint[], callback: (args?: any) => void, context?: {}, options?: GeoPortailOptions): this;
 
-      buildRouteUrl(waypoints: Waypoint[], options: RoutingOptions): Object;
+      buildRouteOpts(waypoints: Waypoint[], options: GeoPortailOptions): Object;
     }
   }
 }
