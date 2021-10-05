@@ -1,0 +1,23 @@
+{
+  "rules": {
+    "no-unused-vars": [
+      "error",
+      {
+        "varsIgnorePattern": "should|expect"
+      }
+    ],
+    "no-unused-expressions": "off",
+    "func-names": "off",
+    "prefer-arrow-callback": "off"
+  },
+  "env": {
+    "jquery": true,
+    "mocha": true
+  },
+  "globals": {
+    "L": "readonly",
+    "expect": "readonly",
+    "sinon": "readonly",
+    "happen": "readonly"
+  }
+}

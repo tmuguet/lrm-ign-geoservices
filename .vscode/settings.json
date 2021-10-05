@@ -1,7 +1,11 @@
 {
-  "prettier.eslintIntegration": true,
+  "git.ignoreLimitWarning": true,
+  "eslint.format.enable": true,
   "prettier.printWidth": 120,
   "prettier.singleQuote": true,
   "prettier.tabWidth": 2,
-  "prettier.trailingComma": "es5"
+  "prettier.trailingComma": "all",
+  "[javascript]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  }
 }
