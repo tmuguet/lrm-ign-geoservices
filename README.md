@@ -22,6 +22,7 @@ There's a single class exported by this module, `L.Routing.GeoPortail`. It imple
 
 ```javascript
 var L = require('leaflet');
+var corslite = require('@mapbox/corslite');
 require('leaflet-routing-machine');
 require('lrm-geoportail'); // This will tack on the class to the L.Routing namespace
 

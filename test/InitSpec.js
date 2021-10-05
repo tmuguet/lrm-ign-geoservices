@@ -48,6 +48,11 @@ describe('Init', function () {
       },
     );
     expect(this.requests.length).to.be.equal(1);
-    this.requests[0].respond(200, { 'Content-Type': 'application/json' }, JSON.stringify(data_viapoint));
+    this.requests[0].respond(
+      200,
+      { 'Content-Type': 'application/json' },
+      // eslint-disable-next-line no-undef
+      JSON.stringify(DATA_VIAPOINT),
+    );
   });
 });

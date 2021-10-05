@@ -1,4 +1,5 @@
-const data_viapoint = {
+// eslint-disable-next-line no-unused-vars
+const DATA_VIAPOINT = {
   resource: 'bdtopo-osrm',
   resourceVersion: '08-07-2021',
   start: '6.075803,44.987204',
