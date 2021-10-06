@@ -1,12 +1,12 @@
 {
-  "name": "lrm-geoportail",
-  "version": "0.1.1",
-  "description": "Support for GeoPortail in Leaflet Routing Machine",
-  "main": "dist/lrm-geoportail.min.js",
+  "name": "lrm-ign-geoservices",
+  "version": "0.2.0",
+  "description": "Support for Ign Geoservices in Leaflet Routing Machine",
+  "main": "dist/lrm-ign-geoservices.min.js",
   "types": "src/index.d.ts",
   "scripts": {
-    "_browserify": "browserify -t [ babelify --presets [ @babel/preset-env ] ] -t browserify-shim -p browserify-derequire src/L.Routing.GeoPortail.js -o dist/lrm-geoportail.js",
-    "_uglify": "uglifyjs dist/lrm-geoportail.js -o dist/lrm-geoportail.min.js",
+    "_browserify": "browserify -t [ babelify --presets [ @babel/preset-env ] ] -t browserify-shim -p browserify-derequire src/L.Routing.IgnGeoservices.js -o dist/lrm-ign-geoservices.js",
+    "_uglify": "uglifyjs dist/lrm-ign-geoservices.js -o dist/lrm-ign-geoservices.min.js",
     "bundle": "npm run _browserify && npm run _uglify",
     "eslint": "eslint src/*.js",
     "validate": "npm run bundle && npm run eslint && npm run test",
@@ -16,16 +16,17 @@
   "keywords": [
     "leaflet",
     "routing",
-    "geoportail"
+    "IGN",
+    "Geoservices"
   ],
   "author": "Thomas Muguet <hi@tmuguet.me>",
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tmuguet/lrm-geoportail.git"
+    "url": "https://github.com/tmuguet/lrm-ign-geoservices.git"
   },
-  "homepage": "https://github.com/tmuguet/lrm-geoportail",
-  "bugs": "https://github.com/tmuguet/lrm-geoportail/issues",
+  "homepage": "https://github.com/tmuguet/lrm-ign-geoservices",
+  "bugs": "https://github.com/tmuguet/lrm-ign-geoservices/issues",
   "browserify-shim": {
     "leaflet": "global:L",
     "@mapbox/corslite": "global:corslite"
