@@ -81,10 +81,20 @@ L.Routing.IgnGeoservices = L.Evented.extend({
     response.portions.forEach(function (portion) {
       portion.steps.forEach(function (step) {
         if (_this3._isValidStep(step)) {
+          var text = '';
+          if (step.instruction) text = step.instruction;else {
+            if (step.attributes.name.cpx_numero) text = step.attributes.name.cpx_numero;
+
+            if (step.attributes.name.cpx_numero || step.attributes.name.nom_1_gauche || step.attributes.name.nom_1_droite) {
+              text += ' ';
+            }
+
+            if (step.attributes.name.nom_1_gauche) text += step.attributes.name.nom_1_gauche;else if (step.attributes.name.nom_1_droite) text += step.attributes.name.nom_1_droite;
+          }
           instr.push({
             distance: step.distance,
             time: step.duration,
-            text: step.instruction || step.attributes.name.cpx_numero + (step.attributes.name.nom_1_gauche || step.attributes.name.nom_1_droite)
+            text: text
           });
         }
       });
