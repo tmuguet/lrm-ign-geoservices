@@ -10,7 +10,7 @@ if (L.Routing === undefined) {
   L.Routing = {};
 }
 
-L.Routing.GeoPortail = L.Evented.extend({
+L.Routing.IgnGeoservices = L.Evented.extend({
   options: {
     serviceUrl: 'https://wxs.ign.fr/calcul/geoportail/itineraire/rest/1.0.0/route',
     timeout: 10 * 1000,
@@ -110,7 +110,7 @@ L.Routing.GeoPortail = L.Evented.extend({
       timedOut = true;
       callback.call(context || callback, {
         status: -1,
-        message: 'IGN request timed out.'
+        message: 'IgnGeoservices request timed out.'
       });
     }, _options.timeout); // eslint-disable-next-line func-names
 
@@ -133,10 +133,10 @@ L.Routing.GeoPortail = L.Evented.extend({
             }
           } catch (ex) {
             error.status = -2;
-            error.message = "Error parsing IGN response: ".concat(ex.toString());
+            error.message = "Error parsing IgnGeoservices response: ".concat(ex.toString());
           }
         } else {
-          error.message = "HTTP request failed: ".concat(err.type) + "".concat(err.target && err.target.status ? " HTTP ".concat(err.target.status, ": ").concat(err.target.statusText) : '');
+          error.message = "IgnGeoservices HTTP request failed: ".concat(err.type) + "".concat(err.target && err.target.status ? " HTTP ".concat(err.target.status, ": ").concat(err.target.statusText) : '');
           error.url = url;
           error.status = -1;
           error.target = err;
@@ -181,11 +181,11 @@ L.Routing.GeoPortail = L.Evented.extend({
   }
 });
 
-L.Routing.geoPortail = function geoPortail(options) {
-  return new L.Routing.GeoPortail(options);
+L.Routing.ignGeoservices = function ignGeoservices(options) {
+  return new L.Routing.IgnGeoservices(options);
 };
 
-module.exports = L.Routing.GeoPortail;
+module.exports = L.Routing.IgnGeoservices;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}]},{},[1]);

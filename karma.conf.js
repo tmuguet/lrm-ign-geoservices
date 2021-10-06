@@ -18,7 +18,7 @@ module.exports = function (config) {
       'node_modules/leaflet/dist/leaflet.js',
       'node_modules/leaflet-routing-machine/dist/leaflet-routing-machine.min.js',
       'node_modules/@mapbox/corslite/corslite.js',
-      'dist/lrm-geoportail.js',
+      'dist/lrm-ign-geoservices.js',
       'test/*.js',
       'test/**/*Spec.js',
     ],
@@ -26,7 +26,7 @@ module.exports = function (config) {
     reporters: ['progress', 'coverage'],
 
     preprocessors: {
-      'dist/lrm-geoportail.js': ['coverage'],
+      'dist/lrm-ign-geoservices.js': ['coverage'],
     },
 
     coverageReporter: {

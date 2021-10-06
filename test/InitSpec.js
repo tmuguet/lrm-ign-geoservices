@@ -20,7 +20,7 @@ describe('Init', function () {
 
   it('Call to route should give a valid structure', function (done) {
     this.timeout(10000);
-    const router = L.Routing.geoPortail({ profile: 'pedestrian' });
+    const router = L.Routing.ignGeoservices({ profile: 'pedestrian' });
 
     router.route(
       [

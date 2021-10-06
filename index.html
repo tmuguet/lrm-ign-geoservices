@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, user-scalable=no" />
     <meta name="author" content="Thomas Muguet" />
 
-    <title>L.Routing.GeoPortail</title>
+    <title>L.Routing.IgnGeoservices</title>
 
     <link rel="stylesheet" href="node_modules/leaflet/dist/leaflet.css" />
     <link
@@ -17,8 +17,8 @@
 
     <script src="node_modules/leaflet/dist/leaflet.js"></script>
     <script src="node_modules/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
-    <script src="node_modules/geoportal-access-lib/dist/GpServices.js"></script>
-    <script src="dist/lrm-geoportail.js"></script>
+    <script src="node_modules/@mapbox/corslite/corslite.js"></script>
+    <script src="dist/lrm-ign-geoservices.js"></script>
   </head>
 
   <body>
@@ -46,8 +46,8 @@
             L.latLng(44.974012776218, 6.069173812866211)
           ],
           routeWhileDragging: true,
-          router: L.Routing.geoPortail('jwwl8p4ie5qcwbgohl0uv7zx', {
-            profile: 'Pieton'
+          router: L.Routing.ignGeoservices({
+            profile: 'pedestrian'
           })
         }).addTo(map);
       };
